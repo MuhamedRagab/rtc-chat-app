@@ -54,40 +54,40 @@ export default function DisplayStream({
     await vedioTrack?.setMuted(!vedioTrack.muted);
   };
 
-  const handleUserJoined = async (
-    user: IAgoraRTCRemoteUser,
-    mediaType: MediaType
-  ) => {
-    setRemoteUsers((prevUsers) => ({
-      ...prevUsers,
-      [user.uid]: user,
-    }));
-
-    await client.subscribe(user, mediaType);
-
-    if (mediaType === "video") {
-      user.videoTrack?.play(`user-${user.uid}`);
-    } else if (mediaType === "audio") {
-      user.audioTrack?.play();
-    }
-  };
-
-  const handleUserLeft = (user: IAgoraRTCRemoteUser) => {
-    setRemoteUsers((prevUsers) => {
-      delete prevUsers[user.uid];
-      return prevUsers;
-    });
-  };
-
-  const init = () => {
-    const [, videoTrack] = localTracks;
-    client.remoteUsers.forEach((user) => {
-      handleUserJoined(user, "video");
-    });
-    videoTrack?.play(`user-${uid}`);
-  };
-
   useEffect(() => {
+    const handleUserJoined = async (
+      user: IAgoraRTCRemoteUser,
+      mediaType: MediaType
+    ) => {
+      setRemoteUsers((prevUsers) => ({
+        ...prevUsers,
+        [user.uid]: user,
+      }));
+
+      await client.subscribe(user, mediaType);
+
+      if (mediaType === "video") {
+        user.videoTrack?.play(`user-${user.uid}`);
+      } else if (mediaType === "audio") {
+        user.audioTrack?.play();
+      }
+    };
+
+    const handleUserLeft = (user: IAgoraRTCRemoteUser) => {
+      setRemoteUsers((prevUsers) => {
+        delete prevUsers[user.uid];
+        return prevUsers;
+      });
+    };
+
+    const init = () => {
+      const [audioTrack, videoTrack] = localTracks;
+      client.remoteUsers.forEach((user) => {
+        handleUserJoined(user, "video");
+      });
+      audioTrack?.setMuted(false);
+      videoTrack?.play(`user-${uid}`);
+    };
     client.on("user-published", handleUserJoined);
     client.on("user-left", handleUserLeft);
 
@@ -97,7 +97,7 @@ export default function DisplayStream({
       client.off("user-published", handleUserJoined);
       client.off("user-left", handleUserLeft);
     };
-  }, [client]);
+  }, [localTracks, setRemoteUsers, uid]);
 
   useEffect(() => {
     if (localTracks.length === 0) navigate("/stream");
@@ -105,7 +105,7 @@ export default function DisplayStream({
 
   return (
     <div>
-      <section className="flex flex-wrap  gap-4 p-4 h-[90vh] container overflow-y-auto">
+      <section className="flex flex-wrap gap-4 p-4 h-[90vh] container overflow-y-auto">
         <div
           id={`user-${uid}`}
           className="video-container w-[480px] h-[320px] rounded-md"
